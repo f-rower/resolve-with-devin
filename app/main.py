@@ -2,10 +2,11 @@ import asyncio
 import contextlib
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from app.config import settings
-from app.database import init_db
+from app.database import get_job, init_db, list_jobs
+from app.models import Job, JobStatus
 from app.poller import poll_for_issues
 from app.session_tracker import check_running_sessions
 
@@ -51,3 +52,16 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/jobs")
+async def get_jobs(status: JobStatus | None = None) -> list[Job]:
+    return list_jobs(status=status)
+
+
+@app.get("/jobs/{job_id}")
+async def get_job_by_id(job_id: int) -> Job:
+    job = get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    return job
