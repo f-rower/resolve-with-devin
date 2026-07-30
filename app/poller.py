@@ -36,7 +36,7 @@ async def poll_for_issues() -> None:
 
     already_claimed = {(job.repository, job.issue_number) for job in list_jobs()}
     eligible = select_eligible_issues(issues, already_claimed)
-
+    print(eligible)
     for issue in eligible:
         try:
             job = create_job(settings.github_repository, issue["number"])
@@ -46,6 +46,7 @@ async def poll_for_issues() -> None:
             continue
 
         try:
+            logger.info(f"Creating Devin session for issue #{issue['number']}")
             session = await create_session(
                 prompt=build_prompt(issue),
                 title=f"Resolve {settings.github_repository}#{issue['number']}",
