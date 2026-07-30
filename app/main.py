@@ -3,6 +3,7 @@ import contextlib
 import logging
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import get_job, init_db, list_jobs
@@ -50,8 +51,13 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/health")
-async def health() -> dict:
-    return {"status": "ok"}
+async def health() -> JSONResponse:
+    try:
+        list_jobs()
+    except Exception:
+        logger.exception("health check DB query failed")
+        return JSONResponse(status_code=503, content={"status": "degraded", "database": "error"})
+    return JSONResponse(status_code=200, content={"status": "ok", "database": "ok"})
 
 
 @app.get("/jobs")
