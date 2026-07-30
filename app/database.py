@@ -1,6 +1,6 @@
 import os
 import sqlite3
-import time
+from datetime import UTC, datetime
 
 from app.config import settings
 from app.models import Job, JobStatus
@@ -35,8 +35,8 @@ def init_db(path: str = settings.database_path) -> None:
                 acus_consumed REAL,
                 error_message TEXT,
                 status_detail TEXT,
-                created_at REAL NOT NULL,
-                updated_at REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
                 UNIQUE(repository, issue_number)
             )
             """
@@ -79,7 +79,7 @@ def create_job(repository: str, issue_number: int, path: str = settings.database
     """Insert a new job in the `claiming` state. Raises DuplicateJobError if one
     already exists for (repository, issue_number) -- this is the real dedup guard,
     not job_exists(), which is only a cheap pre-check."""
-    now = time.time()
+    now = datetime.now(UTC).isoformat()
     conn = _connect(path)
     try:
         try:
@@ -112,7 +112,7 @@ def update_job(job_id: int, path: str = settings.database_path, **fields) -> Non
         return
     if "status" in fields and isinstance(fields["status"], JobStatus):
         fields["status"] = fields["status"].value
-    fields["updated_at"] = time.time()
+    fields["updated_at"] = datetime.now(UTC).isoformat()
     assignments = ", ".join(f"{key} = ?" for key in fields)
     values = [*fields.values(), job_id]
     conn = _connect(path)
