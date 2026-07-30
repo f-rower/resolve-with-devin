@@ -15,9 +15,8 @@ FAILURE_STATUS_DETAILS = {
     "org_usage_limit_exceeded",
     "total_session_limit_exceeded",
     "error",
-    "inactivity",
 }
-NON_TERMINAL_STATUS_DETAILS = {"working", "waiting_for_user", "waiting_for_approval"}
+NON_TERMINAL_STATUS_DETAILS = {"working", "waiting_for_user", "waiting_for_approval", "inactivity"}
 NON_TERMINAL_STATUSES = {"new", "claimed", "running", "resuming", "suspended"}
 
 
