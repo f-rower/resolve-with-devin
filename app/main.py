@@ -81,7 +81,8 @@ async def get_metrics() -> dict:
     # so this stays broader than "completed" -- see completed_with_pr below.
     completed_with_pr = [job for job in with_pr if job.status == JobStatus.COMPLETED]
     average_time_to_pr = (
-        sum(job.updated_at - job.created_at for job in completed_with_pr) / len(completed_with_pr)
+        sum((job.updated_at - job.created_at).total_seconds() for job in completed_with_pr)
+        / len(completed_with_pr)
         if completed_with_pr
         else None
     )

@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel
@@ -21,5 +22,5 @@ class Job(BaseModel):
     acus_consumed: float | None = None
     error_message: str | None = None
     status_detail: str | None = None
-    created_at: float
-    updated_at: float
+    created_at: datetime
+    updated_at: datetime
