@@ -3,9 +3,10 @@ import contextlib
 import logging
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.config import settings
+from app.dashboard import render_dashboard
 from app.database import get_job, init_db, list_jobs
 from app.models import Job, JobStatus
 from app.poller import poll_for_issues
@@ -58,6 +59,11 @@ async def health() -> JSONResponse:
         logger.exception("health check DB query failed")
         return JSONResponse(status_code=503, content={"status": "degraded", "database": "error"})
     return JSONResponse(status_code=200, content={"status": "ok", "database": "ok"})
+
+
+@app.get("/", response_class=HTMLResponse)
+async def dashboard() -> str:
+    return render_dashboard(list_jobs())
 
 
 @app.get("/jobs")
