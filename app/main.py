@@ -65,3 +65,27 @@ async def get_job_by_id(job_id: int) -> Job:
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
     return job
+
+
+@app.get("/metrics")
+async def get_metrics() -> dict:
+    jobs = list_jobs()
+    with_pr = [job for job in jobs if job.pr_url]
+    # A PR can exist before the session is done (e.g. while waiting_for_user),
+    # so this stays broader than "completed" -- see completed_with_pr below.
+    completed_with_pr = [job for job in with_pr if job.status == JobStatus.COMPLETED]
+    average_time_to_pr = (
+        sum(job.updated_at - job.created_at for job in completed_with_pr) / len(completed_with_pr)
+        if completed_with_pr
+        else None
+    )
+
+    return {
+        "issues_detected": len(jobs),
+        "sessions_started": sum(1 for job in jobs if job.devin_session_id is not None),
+        "sessions_running": sum(1 for job in jobs if job.status == JobStatus.RUNNING),
+        "pull_requests_created": len(with_pr),
+        "sessions_failed": sum(1 for job in jobs if job.status == JobStatus.FAILED),
+        "average_time_to_pr_seconds": average_time_to_pr,
+        "total_acus_consumed": sum(job.acus_consumed or 0.0 for job in jobs),
+    }

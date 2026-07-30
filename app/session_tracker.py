@@ -38,12 +38,16 @@ def map_session_to_job_update(session: dict) -> dict:
     top_level_status = session.get("status")
     fields["status_detail"] = status_detail
 
+    # Checked regardless of terminal state -- Devin can open a PR mid-session
+    # (e.g. while waiting_for_user), and pull_requests_created in /metrics
+    # should count that even before the session finishes.
+    pull_requests = session.get("pull_requests") or []
+    if pull_requests:
+        fields["pr_url"] = pull_requests[0].get("pr_url")
+
     if status_detail == "finished":
-        pull_requests = session.get("pull_requests") or []
         fields["status"] = JobStatus.COMPLETED
-        if pull_requests:
-            fields["pr_url"] = pull_requests[0].get("pr_url")
-        else:
+        if not pull_requests:
             fields["pr_url"] = None
             fields["error_message"] = "session finished but no PR was found"
         return fields

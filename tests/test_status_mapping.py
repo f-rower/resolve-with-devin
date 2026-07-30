@@ -47,6 +47,16 @@ def test_failure_status_details_mark_failed(status_detail):
     assert fields["error_message"] == status_detail
 
 
+def test_pr_is_captured_while_session_is_still_running():
+    session = {
+        "status_detail": "waiting_for_user",
+        "pull_requests": [{"pr_url": "https://github.com/owner/repo/pull/2", "pr_state": "open"}],
+    }
+    fields = map_session_to_job_update(session)
+    assert "status" not in fields
+    assert fields["pr_url"] == "https://github.com/owner/repo/pull/2"
+
+
 @pytest.mark.parametrize("status_detail", sorted(NON_TERMINAL_STATUS_DETAILS))
 def test_non_terminal_status_details_stay_in_progress(status_detail):
     session = {"status_detail": status_detail}
