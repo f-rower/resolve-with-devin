@@ -44,6 +44,8 @@ curl localhost:8000/jobs/1
 curl localhost:8000/metrics
 ```
 
+Open `http://localhost:8000` in a browser for a live view of issue resolution progress.
+
 # Architecture
 
 ```
@@ -65,15 +67,6 @@ Session-tracker loop (every SESSION_POLL_INTERVAL_SECONDS)
 
 The app never writes back to GitHub - no relabeling, no comments. Progress lives entirely in the job store and is exposed through `/health`, `/jobs`, `/jobs/{id}`, `/metrics`.
 
-# Key Design Decisions
-
-- **Devin API v3**, not v1. v1 is simpler but deprecated and has no ACU-consumption field. v3 needs a service-user credential and org ID, but gives real `acus_consumed` and a granular `status_detail` on failure.
-- **No GitHub write-back.** Only `devin-resolve` needs to exist as a label, and the PAT only needs read access. Dedup is enforced by a unique constraint on `(repository, issue_number)` in the job store, not by relabeling - labels were never the real guard, since the process can crash between creating a Devin session and updating GitHub.
-- **SQLite**, not a database server. This is a single-process demo; a local file is enough.
-- Devin sessions are bound to the target repository via the `repos` parameter at creation, rather than relying on the prompt text alone.
-
-Known limitations: single repository per instance, no concurrent writers beyond this one process, no auth on the app's own endpoints, no GitHub-visible signal of progress - check `/jobs` instead. The job store is also the only record of what's already been processed - deleting it (or losing it) makes every `devin-resolve`-labelled issue look brand new again, including ones that already have an open PR, since nothing on GitHub itself reflects prior work.
-
 # File tree
 
 ```
@@ -84,8 +77,10 @@ app/
   database.py         SQLite job store, dedup
   github_client.py    read-only issue listing
   devin_client.py     create/get Devin sessions
+  prompts.py          build Devin session prompt
   poller.py           claim issues, start Devin sessions
   session_tracker.py  poll sessions, update jobs
+  dashboard.py        render HTML progress dashboard
   main.py             FastAPI app, background loops
 tests/
   __init__.py
@@ -102,3 +97,12 @@ docker-compose.yml
 pyproject.toml
 README.md
 ```
+
+# Key Design Decisions
+
+- **Devin API v3**, not v1. v1 is simpler but deprecated and has no ACU-consumption field. v3 needs a service-user credential and org ID, but gives real `acus_consumed` and a granular `status_detail` on failure.
+- **No GitHub write-back.** Only `devin-resolve` needs to exist as a label, and the PAT only needs read access. Dedup is enforced by a unique constraint on `(repository, issue_number)` in the job store, not by relabeling - labels were never the real guard, since the process can crash between creating a Devin session and updating GitHub.
+- **SQLite**, not a database server. This is a single-process demo; a local file is enough.
+- Devin sessions are bound to the target repository via the `repos` parameter at creation, rather than relying on the prompt text alone.
+
+Known limitations: single repository per instance, no concurrent writers beyond this one process, no auth on the app's own endpoints, no GitHub-visible signal of progress - check `/jobs` instead. The job store is also the only record of what's already been processed - deleting it (or losing it) makes every `devin-resolve`-labelled issue look brand new again, including ones that already have an open PR, since nothing on GitHub itself reflects prior work. Also polling-based, not webhook-driven: a newly-labelled issue or a Devin session update is only picked up on the next poll cycle, not instantly - up to `POLL_INTERVAL_SECONDS` / `SESSION_POLL_INTERVAL_SECONDS` of latency.
